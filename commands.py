@@ -2,7 +2,7 @@ import threading
 from typing import Dict, List, Any 
 from prompt_toolkit import PromptSession # New import
 from prompt_toolkit import print_formatted_text # New import
-
+import time
 class ServerAdminHandler:  
     def __init__(self, clientNames: Dict[str, Any], clients_lock: threading.Lock, broadcast_message):
         self.clients_by_name = clientNames
@@ -43,27 +43,29 @@ class ServerAdminHandler:
                 print_formatted_text(f"An error occurred: {e}")
     
     def kick_user(self, name_to_kick: str):
-        """Forcefully disconnects a user by name."""
-        name_to_kick = name_to_kick.strip()
         with self.clients_lock:
             target_socket = self.clients_by_name.get(name_to_kick)
             if target_socket:
-                print_formatted_text(f"Kicking user '{name_to_kick}'...")
+                self.admin_print_func(f"Kicking user '{name_to_kick}'...")
                 kicked_user_message = f"[Server] You have been kicked from the server.\n"
                 broadcast_kick_message = f"[Server] User '{name_to_kick}' has been kicked.\n"
-            
+                
                 try:
                     target_socket.send(kicked_user_message.encode('utf-8'))
                 except Exception as e:
-                    print_formatted_text(f"Failed to send kick message to '{name_to_kick}': {e}")
+                    self.admin_print_func(f"Failed to send kick message to '{name_to_kick}': {e}")
                 finally:
+                    # Closing the socket will cause the client handler thread to finish.
                     target_socket.close()
+                    # It's better to remove the client name here to avoid issues
                     del self.clients_by_name[name_to_kick]
                     self.broadcast_message(broadcast_kick_message.encode('utf-8'))
+                
+                # Add a small delay to allow the client handler thread to finish its logging.
+                time.sleep(0.1)
 
             else:
-                print_formatted_text(f"User '{name_to_kick}' not found.")
-
+                self.admin_print_func(f"User '{name_to_kick}' not found.")
     def list_users(self):
         """Prints a list of connected users to the server console."""
         with self.clients_lock:

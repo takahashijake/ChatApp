@@ -3,6 +3,10 @@ import threading
 import sys
 from commands import ServerAdminHandler
 
+from prompt_toolkit import PromptSession
+from prompt_toolkit import print_formatted_text
+from prompt_toolkit.patch_stdout import patch_stdout
+
 connected_clients = []
 clients_lock = threading.Lock()
 clientNames = {}
@@ -26,7 +30,7 @@ class MessageReceiver:
     def has_pending_data(self) -> bool:
         return bool(self._buffer)
         
-def handleClients(client_socket, client_address):
+def handleClients(client_socket, client_address, admin_print_func):
     message_receiver = MessageReceiver()
     clientName = ''
     with clients_lock:
@@ -34,14 +38,14 @@ def handleClients(client_socket, client_address):
     try:
         name = client_socket.recv(1024)
         if not name:
-            print(f"Client {client_socket.getpeername()} disconnected")
+            admin_print_func(f"Client {client_socket.getpeername()} disconnected")
             return
         message_receiver.add_data(name)
-        client_name = next(message_receiver.get_messages())
-
+        client_name = next(message_receiver.get_messages()).strip() # Use .strip() for the name
+        
         with clients_lock:
             clientNames[client_name] = client_socket
-        print(f"Conncetion from {client_socket.getpeername()}")
+        admin_print_func(f"Connection from {client_socket.getpeername()}")
 
         join_message = f"{client_name} has joined the chat.\n"
         broadcast_message(join_message.encode('utf-8'), sender_socket=client_socket)
@@ -51,13 +55,12 @@ def handleClients(client_socket, client_address):
                 break
             message_receiver.add_data(data)
             for full_message in message_receiver.get_messages():
-        
-                print(f"{client_name}: {full_message}")
+                admin_print_func(f"{client_name}: {full_message}")
                 broadcast_message(f"{client_name}: {full_message}\n".encode('utf-8'), sender_socket=client_socket)
     except socket.error as e:
-        print(f"Error handling client {client_socket.getpeername()}")
+        admin_print_func(f"Error handling client {client_socket.getpeername()}")
     except Exception as e:
-        print("Unexpected error")
+        admin_print_func("Unexpected error")
     finally:
         with clients_lock:
             if client_socket in connected_clients:
@@ -65,12 +68,12 @@ def handleClients(client_socket, client_address):
             if client_name in clientNames:
                 del clientNames[client_name]
             if client_name:
-                leave_message = f"\n{client_name} has left the chat.\n"
+                leave_message = f"{client_name} has left the chat.\n"
                 broadcast_message(leave_message.encode('utf-8'))
-                print(leave_message.strip())
+                admin_print_func(leave_message.strip())
             client_socket.close()
-            print(f"Socket for {client_address} closed")
-
+            admin_print_func(f"Socket for {client_address} closed")
+            
 def broadcast_message(message: bytes, sender_socket = None):
     with clients_lock:
         for client_socket in connected_clients:
@@ -81,9 +84,6 @@ def broadcast_message(message: bytes, sender_socket = None):
                     continue
 
 def start_server():
-    """
-    Main server function that accepts new connections and spawns threads.
-    """
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     host = 'localhost'
     port = 8000
@@ -91,37 +91,35 @@ def start_server():
 
     try:
         server_socket.bind(server_address)
-        print(f"Server started on {server_address}. Listening for connections...")
-        server_socket.listen(5) # The backlog queue size
+        print_formatted_text(f"Server started on {server_address}. Listening for connections...")
+        server_socket.listen(5)
     except socket.error as e:
-        print(f"Failed to bind socket: {e}")
+        print_formatted_text(f"Failed to bind socket: {e}")
         sys.exit(1)
+
+    # Use a custom prompt_toolkit session for the server
+    admin_session = PromptSession()
+    def admin_print_func(text):
+        with patch_stdout(raw=True):
+            print_formatted_text(text)
 
     admin_handler = ServerAdminHandler(clientNames, clients_lock, broadcast_message)
     admin_thread = threading.Thread(target=admin_handler.handle_admin_commands)
     admin_thread.daemon = True
     admin_thread.start()
-    # Main server loop to accept new connections indefinitely
+
     while True:
         try:
-            # The accept() call will block here until a new client connects.
-            # It returns a new socket object (conn) and the client's address.
             conn, addr = server_socket.accept()
-            print(f"Connection from: {addr}")
-
-            # Create a new thread to handle this specific client.
-            client_thread = threading.Thread(target=handleClients, args=(conn, addr))
-            
-            # Start the new thread. It will now run the handle_client_connection function.
+            admin_print_func(f"Connection from: {addr}")
+            client_thread = threading.Thread(target=handleClients, args=(conn, addr, admin_print_func))
             client_thread.start()
-
         except KeyboardInterrupt:
-            print("\nServer shutting down.")
+            admin_print_func("Server shutting down.")
             break
         except Exception as e:
-            print(f"An error occurred while accepting a connection: {e}")
+            admin_print_func(f"An error occurred while accepting a connection: {e}")
             
-    # Clean up and close the main server socket
     server_socket.close()
 
 if __name__ == '__main__':
