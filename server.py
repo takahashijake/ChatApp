@@ -103,7 +103,7 @@ def start_server():
         with patch_stdout(raw=True):
             print_formatted_text(text)
 
-    admin_handler = ServerAdminHandler(clientNames, clients_lock, broadcast_message)
+    admin_handler = ServerAdminHandler(clientNames, clients_lock, broadcast_message, admin_print_func)
     admin_thread = threading.Thread(target=admin_handler.handle_admin_commands)
     admin_thread.daemon = True
     admin_thread.start()

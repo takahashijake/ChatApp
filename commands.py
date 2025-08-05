@@ -4,12 +4,31 @@ from prompt_toolkit import PromptSession # New import
 from prompt_toolkit import print_formatted_text # New import
 import time
 class ServerAdminHandler:  
-    def __init__(self, clientNames: Dict[str, Any], clients_lock: threading.Lock, broadcast_message):
+    def __init__(self, clientNames: Dict[str, Any], clients_lock: threading.Lock, broadcast_message, admin_print_func):
         self.clients_by_name = clientNames
         self.clients_lock = clients_lock
         self.broadcast_message = broadcast_message
         self.running = True
         self.session = PromptSession() # New: Create a session object
+        self.admin_print_func = admin_print_func
+
+    def closeAllClients(self):
+        with self.clients_lock:
+            for client in self.clients_by_name:
+                client_socket = self.clients_by_name.get(client)
+                if client_socket:
+                    endingMessage = "Server is shutting down. Press any key to exit"
+                    try:
+                        client_socket.send(endingMessage.encode('utf-8'))
+                    except Exception as e:
+                        self.admin_print_func(f"Faild to kick a user")
+                    finally:
+                        client_socket.close()
+                        message = "successfully kicked user!"
+                        self.broadcast_message(message.encode('utf-8'))
+
+
+
 
     def handle_admin_commands(self):
         """
@@ -32,7 +51,9 @@ class ServerAdminHandler:
                     self.list_users()
                 elif action == "exit":
                     print_formatted_text("Exiting admin console.")
+                    self.closeAllClients()
                     self.running = False
+                    exit()
                     break
                 else:
                     print_formatted_text("Unknown command. Available commands: kick <name>, list, exit")
