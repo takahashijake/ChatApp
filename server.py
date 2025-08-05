@@ -110,17 +110,28 @@ def start_server():
 
     while True:
         try:
-            conn, addr = server_socket.accept()
-            admin_print_func(f"Connection from: {addr}")
-            client_thread = threading.Thread(target=handleClients, args=(conn, addr, admin_print_func))
-            client_thread.start()
-        except KeyboardInterrupt:
-            admin_print_func("Server shutting down.")
-            break
+            while admin_handler.running:
+                try:
+                    conn, addr = server_socket.accept()
+                    admin_print_func(f"Connection from: {addr}")
+                    client_thread = threading.Thread(target=handleClients, args=(conn, addr, admin_print_func))
+                    client_thread.start()
+                except KeyboardInterrupt:
+                    admin_print_func("Server shutting down.")
+                    break
         except Exception as e:
             admin_print_func(f"An error occurred while accepting a connection: {e}")
-            
-    server_socket.close()
+        finally:
+            admin_print_func("Cleaning up...")
+        # Close all client connections
+            with clients_lock:
+                for client in list(clientNames.values()):
+                    try:
+                        client.sendall("Server is shutting down. Goodbye!\n".encode('utf-8'))
+                        client.close()
+                    except:
+                        pass
+            server_socket.close()
 
 if __name__ == '__main__':
     start_server()

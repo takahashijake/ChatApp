@@ -3,6 +3,8 @@ from typing import Dict, List, Any
 from prompt_toolkit import PromptSession # New import
 from prompt_toolkit import print_formatted_text # New import
 import time
+import sys 
+
 class ServerAdminHandler:  
     def __init__(self, clientNames: Dict[str, Any], clients_lock: threading.Lock, broadcast_message, admin_print_func):
         self.clients_by_name = clientNames
@@ -14,20 +16,19 @@ class ServerAdminHandler:
 
     def closeAllClients(self):
         with self.clients_lock:
-            for client in self.clients_by_name:
+            for client in list(self.clients_by_name.keys()):
                 client_socket = self.clients_by_name.get(client)
                 if client_socket:
                     endingMessage = "Server is shutting down. Press any key to exit"
                     try:
                         client_socket.send(endingMessage.encode('utf-8'))
-                    except Exception as e:
+                    except:
                         self.admin_print_func(f"Faild to kick a user")
                     finally:
                         client_socket.close()
                         message = "successfully kicked user!"
                         self.broadcast_message(message.encode('utf-8'))
-
-
+                        del self.clients_by_name[client]
 
 
     def handle_admin_commands(self):
@@ -53,8 +54,7 @@ class ServerAdminHandler:
                     print_formatted_text("Exiting admin console.")
                     self.closeAllClients()
                     self.running = False
-                    exit()
-                    break
+                    return
                 else:
                     print_formatted_text("Unknown command. Available commands: kick <name>, list, exit")
             except (EOFError, KeyboardInterrupt):
