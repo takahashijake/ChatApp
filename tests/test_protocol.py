@@ -1,6 +1,6 @@
 import pytest
 
-from chatapp.protocol import LineBuffer, ProtocolError, encode_line, validate_username
+from chatapp.protocol import MAX_LINE_BYTES, LineBuffer, ProtocolError, encode_line, validate_username
 
 
 def test_line_buffer_handles_fragmented_and_multiple_messages() -> None:
@@ -39,3 +39,8 @@ def test_validate_username_rejects_invalid_names(username: str) -> None:
 def test_encode_line_rejects_embedded_newline() -> None:
     with pytest.raises(ProtocolError):
         encode_line("hello\nworld")
+
+
+def test_encode_line_rejects_oversized_payload() -> None:
+    with pytest.raises(ProtocolError, match="maximum line size"):
+        encode_line("x" * (MAX_LINE_BYTES + 1))
