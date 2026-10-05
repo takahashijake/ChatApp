@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="ChatApp — a lightweight real-time chat client backed by the ChatApp TCP server."
+    />
+    <title>ChatApp</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <main class="app-frame">
+      <section id="join-view" class="join-view">
+        <div class="join-card">
+          <div class="brand-lockup">
+            <div class="brand-mark" aria-hidden="true">C</div>
+            <div>
+              <p class="eyebrow">TCP + WebSocket</p>
+              <h1>ChatApp</h1>
+            </div>
+          </div>
+
+          <div class="join-copy">
+            <p class="kicker">A cleaner way into the room.</p>
+            <h2>Real-time chat, without the terminal.</h2>
+            <p>
+              Join the same ChatApp backend used by the command-line client through a responsive,
+              browser-native interface.
+            </p>
+          </div>
+
+          <form id="join-form" class="join-form" novalidate>
+            <label for="username">Choose a username</label>
+            <div class="input-shell">
+              <span class="input-prefix" aria-hidden="true">@</span>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autocomplete="nickname"
+                maxlength="32"
+                pattern="[A-Za-z0-9_.-]{1,32}"
+                placeholder="jake"
+                required
+              />
+            </div>
+            <p id="join-error" class="form-error" role="alert"></p>
+            <button id="join-button" class="primary-button" type="submit">
+              <span>Enter general</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </form>
+
+          <div class="join-meta" aria-label="Product capabilities">
+            <span>Live delivery</span>
+            <span>Shared TCP backend</span>
+            <span>Responsive UI</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="chat-view" class="chat-view" hidden>
+        <aside class="sidebar">
+          <div class="sidebar-brand">
+            <div class="brand-mark brand-mark-small" aria-hidden="true">C</div>
+            <div>
+              <strong>ChatApp</strong>
+              <span>Local workspace</span>
+            </div>
+          </div>
+
+          <nav class="channel-nav" aria-label="Channels">
+            <p class="nav-label">Channels</p>
+            <button class="channel-item active" type="button" aria-current="page">
+              <span class="channel-hash" aria-hidden="true">#</span>
+              <span>general</span>
+            </button>
+          </nav>
+
+          <div class="sidebar-note">
+            <span class="note-icon" aria-hidden="true">↯</span>
+            <div>
+              <strong>Shared backend</strong>
+              <p>Browser and terminal clients occupy the same TCP room.</p>
+            </div>
+          </div>
+
+          <div class="profile-card">
+            <div id="profile-avatar" class="avatar">J</div>
+            <div class="profile-copy">
+              <strong id="profile-name">guest</strong>
+              <span>Connected user</span>
+            </div>
+            <button id="leave-button" class="icon-button" type="button" title="Leave chat">
+              <span aria-hidden="true">↗</span>
+              <span class="sr-only">Leave chat</span>
+            </button>
+          </div>
+        </aside>
+
+        <section class="chat-panel">
+          <header class="chat-header">
+            <div class="channel-title">
+              <div class="channel-symbol" aria-hidden="true">#</div>
+              <div>
+                <h2>general</h2>
+                <p>Shared room for every connected client</p>
+              </div>
+            </div>
+
+            <div id="connection-pill" class="connection-pill">
+              <span class="status-dot"></span>
+              <span id="connection-label">Online</span>
+            </div>
+          </header>
+
+          <div id="message-region" class="message-region" aria-live="polite">
+            <div id="empty-state" class="empty-state">
+              <div class="empty-icon" aria-hidden="true">#</div>
+              <h3>Welcome to #general</h3>
+              <p>This is the beginning of the room. Send a message to start the conversation.</p>
+            </div>
+            <div id="message-list" class="message-list"></div>
+          </div>
+
+          <div class="composer-wrap">
+            <form id="message-form" class="composer">
+              <label class="sr-only" for="message-input">Message #general</label>
+              <input
+                id="message-input"
+                type="text"
+                maxlength="4000"
+                autocomplete="off"
+                placeholder="Message #general"
+              />
+              <span id="message-count" class="message-count">0 / 4000</span>
+              <button id="send-button" class="send-button" type="submit" title="Send message">
+                <span aria-hidden="true">↑</span>
+                <span class="sr-only">Send message</span>
+              </button>
+            </form>
+            <p class="composer-hint">Enter to send · messages are transported through ChatApp TCP</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast-region" class="toast-region" aria-live="assertive"></div>
+  </body>
+</html>
