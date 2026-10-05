@@ -65,7 +65,7 @@ class ChatClient:
                 if not data:
                     return
                 yield from receiver.feed(data)
-        except (ConnectionResetError, BrokenPipeError, OSError):
+        except OSError:
             return
         finally:
             self._connected.clear()
@@ -117,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
                 break
             try:
                 client.send_message(message)
-            except (ConnectionError, OSError, ProtocolError) as exc:
+            except (OSError, ProtocolError) as exc:
                 print_formatted_text(f"Send failed: {exc}")
                 break
     except (EOFError, KeyboardInterrupt):
