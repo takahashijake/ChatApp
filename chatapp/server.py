@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import socket
 import threading
-from contextlib import suppress
 from collections.abc import Callable
+from contextlib import suppress
 
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.patch_stdout import patch_stdout
