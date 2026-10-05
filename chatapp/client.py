@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import argparse
 import socket
-from contextlib import suppress
 import threading
 from collections.abc import Iterator
+from contextlib import suppress
 
 from prompt_toolkit import PromptSession, print_formatted_text
 from prompt_toolkit.patch_stdout import patch_stdout
