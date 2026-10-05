@@ -1,6 +1,12 @@
 import pytest
 
-from chatapp.protocol import MAX_LINE_BYTES, LineBuffer, ProtocolError, encode_line, validate_username
+from chatapp.protocol import (
+    MAX_LINE_BYTES,
+    LineBuffer,
+    ProtocolError,
+    encode_line,
+    validate_username,
+)
 
 
 def test_line_buffer_handles_fragmented_and_multiple_messages() -> None:
