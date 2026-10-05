@@ -176,7 +176,7 @@ class ChatServer:
         except ProtocolError as exc:
             self._safe_send(client_socket, f"[Server] Protocol error: {exc}")
             self._logger(f"Protocol error from {client_address}: {exc}")
-        except (ConnectionResetError, BrokenPipeError, OSError) as exc:
+        except OSError as exc:
             if not self._stop_event.is_set():
                 self._logger(f"Connection error for {client_address}: {exc}")
         finally:
@@ -218,7 +218,7 @@ class ChatServer:
         try:
             client_socket.sendall(encode_line(message))
             return True
-        except (BrokenPipeError, ConnectionResetError, OSError):
+        except OSError:
             return False
 
     @staticmethod
