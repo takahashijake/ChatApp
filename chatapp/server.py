@@ -160,6 +160,11 @@ class ChatServer:
                 )
                 return
 
+            if not self._safe_send(client_socket, f"[Server] Welcome, {username}."):
+                self._unregister_client(username, client_socket)
+                registered = False
+                return
+
             self._logger(f"{username} connected from {client_address}")
             self.broadcast(f"[Server] {username} has joined the chat.", exclude=client_socket)
 

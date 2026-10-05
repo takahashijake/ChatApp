@@ -58,10 +58,14 @@ class LineBuffer:
 
 
 def encode_line(message: str) -> bytes:
-    """Encode one protocol line, rejecting embedded newlines."""
+    """Encode one protocol line, rejecting embedded newlines and oversized payloads."""
     if "\n" in message or "\r" in message:
         raise ProtocolError("messages must not contain newline characters")
-    return f"{message}\n".encode("utf-8")
+
+    payload = f"{message}\n".encode()
+    if len(payload) - 1 > MAX_LINE_BYTES:
+        raise ProtocolError("message exceeds the maximum line size")
+    return payload
 
 
 def validate_username(username: str) -> str:

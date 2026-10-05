@@ -1,27 +1,27 @@
 # ChatApp
 
-A small, testable TCP chat application built in Python. ChatApp provides a threaded multi-client
-server, terminal client, and interactive server administration console while keeping the wire
-protocol deliberately simple.
+ChatApp is a real-time Python chat application with a threaded TCP backend, terminal client, and a
+responsive browser frontend. The browser experience is not a separate demo: its WebSocket gateway
+bridges each browser session into the same TCP server used by command-line clients.
 
-## Highlights
+## What it looks like now
 
-- Multi-client TCP chat with newline-delimited UTF-8 messages.
-- Atomic username registration with duplicate-name rejection.
-- Admin commands for listing users, kicking users, and shutting down cleanly.
-- Graceful socket cleanup and explicit handling for normal disconnect failures.
-- Installable command-line entry points plus backward-compatible top-level scripts.
-- Automated protocol, admin, and real-socket integration tests.
-- CI across Python 3.11-3.13, dependency updates, and tag-driven GitHub releases.
+The default product experience is the web UI:
 
-## Requirements
+- polished dark responsive interface for desktop and mobile
+- live WebSocket delivery
+- shared room with terminal clients
+- username validation and duplicate-name enforcement
+- join/leave and server-event presentation
+- connection-state feedback and graceful disconnect behavior
+- no browser framework, CDN, or external asset dependency
 
-- Python 3.11+
-- `prompt-toolkit` (installed automatically)
+Underneath the UI, ChatApp keeps a deliberately small networking architecture that is easy to
+inspect and test.
 
 ## Quick start
 
-Create an environment and install the project:
+ChatApp requires Python 3.11 or newer.
 
 ```bash
 python -m venv .venv
@@ -37,31 +37,94 @@ python -m venv .venv
 python -m pip install -e .
 ```
 
-Start the server:
+### Start the complete product
+
+```bash
+chatapp-app
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8080
+```
+
+This one command starts:
+
+- the ChatApp TCP server on `127.0.0.1:8000`
+- the browser/WebSocket gateway on `127.0.0.1:8080`
+
+### Add a terminal client
+
+In another terminal:
+
+```bash
+chatapp-client --name terminal-user
+```
+
+Messages from the terminal appear in the browser, and browser messages appear in the terminal.
+
+## Run components separately
+
+TCP server only:
 
 ```bash
 chatapp-server
 ```
 
-Then, in another terminal:
+Browser gateway connected to an existing TCP server:
+
+```bash
+chatapp-web --chat-host 127.0.0.1 --chat-port 8000
+```
+
+Terminal client:
 
 ```bash
 chatapp-client --name alice
 ```
 
-The historical entry points continue to work:
+The historical launchers remain valid:
 
 ```bash
 python server.py
 python client.py
 ```
 
-By default the application uses `127.0.0.1:8000`. Both commands accept `--host` and `--port`.
-Run `chatapp-server --no-admin` when an interactive server console is not appropriate.
+## Architecture
+
+```text
+┌──────────────────────┐
+│ Browser frontend     │
+│ HTML · CSS · JS      │
+└──────────┬───────────┘
+           │ WebSocket
+           ▼
+┌──────────────────────┐
+│ FastAPI web gateway  │
+└──────────┬───────────┘
+           │ ChatClient / TCP
+           ▼
+┌──────────────────────┐
+│ ChatServer           │
+│ username registry    │
+│ broadcast + admin    │
+└───────┬────────┬─────┘
+        │        │
+        ▼        ▼
+ terminal    terminal
+ client      client
+```
+
+The TCP server remains the source of truth. Browser connections do not maintain a second user
+registry or separate chat room.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the complete networking design and
+[docs/WEB_FRONTEND.md](docs/WEB_FRONTEND.md) for the browser gateway contract.
 
 ## Server admin console
 
-While the server is running with its admin console enabled:
+When running `chatapp-server` directly, the interactive admin console supports:
 
 | Command | Action |
 | --- | --- |
@@ -70,9 +133,9 @@ While the server is running with its admin console enabled:
 | `help` | Show available commands |
 | `exit` | Shut down the server and connected clients |
 
-Usernames are 1-32 characters and may contain letters, numbers, `.`, `_`, and `-`.
+Usernames are 1–32 characters and may contain letters, numbers, `.`, `_`, and `-`.
 
-## Development
+## Development and QA
 
 Install development dependencies:
 
@@ -80,7 +143,7 @@ Install development dependencies:
 python -m pip install -e ".[dev]"
 ```
 
-Run the quality gate:
+Run the same quality gate as CI:
 
 ```bash
 ruff check .
@@ -88,47 +151,63 @@ pytest
 python -m build
 ```
 
-Apply formatting with:
+The test suite covers:
 
-```bash
-ruff format .
-```
+- newline protocol fragmentation and validation
+- admin command behavior
+- TCP connection lifecycle and duplicate usernames
+- browser/static asset serving
+- WebSocket validation
+- a real browser-gateway-to-TCP integration path
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor expectations and
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the concurrency and protocol design.
+The integration test starts a real TCP server on an ephemeral port, opens a WebSocket browser
+session, adds a raw TCP client, and verifies messages cross both transports.
 
 ## CI/CD
 
-Pull requests run linting, tests, and package builds in GitHub Actions. Tests run on Python 3.11,
-3.12, and 3.13. Pushing a tag such as `v0.1.0` builds wheel/source artifacts and creates a GitHub
-release automatically.
+Pull requests run linting, tests, and package builds on Python 3.11, 3.12, and 3.13. Superseded PR
+runs are cancelled automatically. Version tags build distribution artifacts and create GitHub
+releases.
 
-Dependabot checks Python and GitHub Actions dependencies weekly.
-
-## Security
-
-This is a learning-scale chat application, not a production messaging service. Connections are
-plaintext TCP and there is no authentication or end-to-end encryption. Do not expose it to an
-untrusted public network or use it for sensitive data. See [SECURITY.md](SECURITY.md).
+Dependabot monitors both Python packages and GitHub Actions dependencies.
 
 ## Project structure
 
 ```text
 chatapp/
-  admin.py       server administration command parsing
-  client.py      reusable client plus terminal UI
-  protocol.py    framing and validation
-  server.py      threaded server and client registry
-tests/           unit and TCP integration tests
-docs/            architecture documentation
-.github/         CI/CD and repository automation
-client.py        compatibility launcher
-server.py        compatibility launcher
-commands.py      compatibility import
+  app.py             combined product launcher
+  admin.py           server administration commands
+  client.py          reusable TCP client + terminal UI
+  protocol.py        UTF-8 line framing and validation
+  server.py          threaded TCP server
+  web.py             FastAPI WebSocket/TCP gateway
+  frontend/
+    index.html       browser application shell
+    styles.css       responsive visual system
+    app.js           WebSocket UI behavior
+
+tests/
+  test_admin.py
+  test_protocol.py
+  test_server_integration.py
+  test_web.py
+
+docs/
+  ARCHITECTURE.md
+  WEB_FRONTEND.md
 ```
+
+## Security boundaries
+
+ChatApp remains a learning-scale networking application. The TCP transport is plaintext and there
+is no authentication or end-to-end encryption. The web gateway adds browser security headers but
+does not change those trust assumptions. Do not expose the application to an untrusted public
+network or use it for sensitive data.
+
+See [SECURITY.md](SECURITY.md).
 
 ## Roadmap
 
-Good next product increments include chat rooms, authenticated identities, TLS, structured protocol
-frames, persisted history, and an asynchronous server implementation. Each should be added with a
-clear protocol versioning and migration story.
+Strong next increments are authenticated identity, persisted history, rooms, TLS, structured
+versioned protocol frames, moderation controls, and eventually an event-driven server for larger
+connection counts.
