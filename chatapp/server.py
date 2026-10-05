@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import socket
 import threading
+from contextlib import suppress
 from collections.abc import Callable
 
 from prompt_toolkit import print_formatted_text
@@ -95,10 +96,8 @@ class ChatServer:
         listen_socket = self._listen_socket
         self._listen_socket = None
         if listen_socket is not None:
-            try:
+            with suppress(OSError):
                 listen_socket.close()
-            except OSError:
-                pass
 
         with self._clients_lock:
             clients = list(self._clients.items())
@@ -223,14 +222,10 @@ class ChatServer:
 
     @staticmethod
     def _close_socket(client_socket: socket.socket) -> None:
-        try:
+        with suppress(OSError):
             client_socket.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
-        try:
+        with suppress(OSError):
             client_socket.close()
-        except OSError:
-            pass
 
 
 def main(argv: list[str] | None = None) -> int:
