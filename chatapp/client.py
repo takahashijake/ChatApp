@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import socket
+from contextlib import suppress
 import threading
 from collections.abc import Iterator
 
@@ -76,10 +77,8 @@ class ChatClient:
         self._socket = None
         if stream_socket is None:
             return
-        try:
+        with suppress(OSError):
             stream_socket.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
         stream_socket.close()
 
 
